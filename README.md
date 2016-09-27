@@ -19,5 +19,6 @@ https://github.com/rossgoodwin/hmap (convers one image histrogram to another one
 
 
 
-
+## MATPLOTLIB LINKS
+http://www.randalolson.com/2014/06/28/how-to-make-beautiful-data-visualizations-in-python-with-matplotlib/
 
