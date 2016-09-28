@@ -10,6 +10,9 @@ import json
 from PIL import Image, ImageStat, ImageChops, ImageEnhance
 import numpy as np
 from matplotlib import pyplot as plt
+from fractions import Fraction
+from decimal import Decimal
+
 
 class PythonHistrogramAnalysisExtractor:
 
@@ -27,7 +30,7 @@ class PythonHistrogramAnalysisExtractor:
     def json(self):
         return json.dumps(self._json_data)
 
-    def _calc_definite_exposure(self):
+    def _detect_exposure_loss(self):
         """
         Hardcoded check of darkest bin and lightest bin
         """
@@ -35,9 +38,9 @@ class PythonHistrogramAnalysisExtractor:
         darkest_bin = self._grey_hist[0]
         lightest_bin = self._grey_hist[255]
         if lightest_bin >= mean:
-            self._json_data.append({'over_exposed': True})
+            self._json_data.append({'over_exposed_loss': True})
         if darkest_bin >= mean:
-            self._json_data.append({'under_exposed': True})
+            self._json_data.append({'under_exposed_loss': True})
 
     def _calc_weighted_exposure(self):
         """
@@ -59,13 +62,32 @@ class PythonHistrogramAnalysisExtractor:
             bins153to203_middle += self._grey_hist[bin_num]
         for bin_num in range(204, 255):
             bins204to255_very_light += self._grey_hist[bin_num]
-        pass
+
+        # fraction = Fraction(bins0to51_very_dark, bins204to255_very_light)
+        # print(fraction.limit_denominator())
+
+        self._json_data.append({
+            'very_dark_vs_very_light_ratio': self._ratio(bins0to51_very_dark, bins204to255_very_light)
+        })
+
+    def _ratio(self, a, b):
+        a = float(a)
+        b = float(b)
+
+        if a >= b:
+            left = round(a/b, 1)
+            right = round(b/b, 1)
+        else:
+            left = round(a/a, 1)
+            right = round(b/a, 1)
+
+        return '{0}:{1}'.format(left, right)
+
 
     def execute(self):
         self._image = Image.open(self._file_path)
         self._cv_image = cv2.imread(self._file_path, cv2.IMREAD_COLOR)
         self._grey_image = cv2.imread(self._file_path, cv2.IMREAD_GRAYSCALE)
-
 
         color = ('b', 'g', 'r')
         features = []
@@ -83,7 +105,7 @@ class PythonHistrogramAnalysisExtractor:
         self._grey_hist, self._grey_bins = np.histogram(self._grey_image, 256, [0, 256])
         plt.hist(self._grey_image.ravel(), 256, [0, 256])
 
-        self._calc_definite_exposure()
+        self._detect_exposure_loss()
         self._calc_weighted_exposure()
 
         # plt.subplot(224)
@@ -109,17 +131,16 @@ class PythonHistrogramAnalysisExtractor:
         plt.show()
 
 
-
-
 if __name__ == "__main__":
     # generator = PythonHistrogramAnalysisExtractor('../Resources/pacers.jpg')
     # generator = PythonHistrogramAnalysisExtractor('../Resources/house.jpg')
     # generator = PythonHistrogramAnalysisExtractor('../Resources/pacers_dark.jpg')
+    generator = PythonHistrogramAnalysisExtractor('../Resources/pacers_under.jpg')
     # generator = PythonHistrogramAnalysisExtractor('../Resources/pacers_high_contrast.jpg')
     # generator = PythonHistrogramAnalysisExtractor('../Resources/crowd.jpg')
     # generator.execute()
 
-    generator = PythonHistrogramAnalysisExtractor('../Resources/house.jpg')
+    # generator = PythonHistrogramAnalysisExtractor('../Resources/house.jpg')
     generator.execute()
     print(generator.json)
 
